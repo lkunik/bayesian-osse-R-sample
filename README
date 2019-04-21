@@ -1,0 +1,74 @@
+README file: bayesian-osse-R source code
+
+-------------------------
+Overview of inverse model code
+-------------------------
+
+This Bayesian inverse model code is based loosely on NOAA CarbonTracker-Lagrange
+software (see: https://www.esrl.noaa.gov/gmd/ccgg/carbontracker-lagrange/), but
+written in the R programming language. This particular set-up performs an Observing
+System Simulation Experiment (OSSE), meaning that a set of "true" emissions are
+defined so as to generate synthetic enhancements which serve as the model data,
+in hopes of recovering the "true" emissions in the posterior/optimized result.
+This framework is equipped with random-normal perturbations in the synthetic data
+in order to simulate the presence of model-data mismatch errors in the observations.
+
+
+Code can be run as-is, provided that the proper input files are supplied. See
+config.r file in inversion/ directory for sample naming conventions of input files.
+
+Required input files should be placed in the include/ directory:
+  prior_emiss.nc
+  prior_uncert.nc
+  lonlat_domain.rds
+  obs.rds
+  background.rds
+
+The following packages must be installed to successfully run the model code:
+  "ncdf4"
+  "lubridate"
+  "geosphere"
+  "data.table"
+
+After inputs are supplied, the program may be run from the inversion/ directory.
+If running in the R programming environment (R or Rstudio), run by typing 'source("run_all.r")'. (without single quotes)
+If running directly from the terminal, run by typing 'Rscript run_all.r'.
+
+  NOTE: input NetCDF files (prior_emiss.nc, prior_uncert.nc, etc) should exist
+  in (lon x lat x time) format, with lon/lat values indicating center-of-grid-cell,
+  and time values expressed as beginning of time-step in either POSIX time or seconds since R epoch
+  (1970-01-01 00:00:00 UTC).
+
+  obs.rds input file should be formatted as a matrix with 3 columns, where all observation
+   datapoints are be concatenated by rows, with the site code in column 1, the
+  timestamp in column 2, and data value in column 3. Site code should correspond to
+  that site's directory name in the footprints/ directory. Data timestamps should
+  correspond to the observation resolution of the inversion (e.g. hourly), denoted in config.r.
+  The inversion code does internal processing and filtering of data to match the
+  observation time domain, so the supplied file can have any time range of observations.
+   see example:
+                # SITECODE  OBS TIME (seconds since 1970-01-01 00:00:00)  OBS VALUE
+   (row 1)      # 'site1'          '[t1 number of seconds]'                 'X.XXX'
+   (row 2)      # 'site1'          '[t2 number of seconds]'                 'X.XXX'
+    (...)       #   ...                       ...                             ...
+   (row n)      # 'siteN'          '[tN number of seconds]'                 'X.XXX'
+
+   background.rds should be formatted similarly, but excluding SITECODE column.
+   see example:
+
+                 #   BG TIME (seconds since 1970-01-01 00:00:00)   BG VALUE
+    (row 1)      #         '[t1 number of seconds]'                 'X.XXX'
+    (row 2)      #         '[t2 number of seconds]'                 'X.XXX'
+     (...)       #                    ...                             ...
+    (row n)      #         '[tN number of seconds]'                 'X.XXX'
+
+
+
+In addition, footprint files must be supplied in the footprints/ directory.
+Files should be in NetCDF format with dimensions (lon x lat x time). Source code
+is designed to work with files matching output format from STILT-R
+(https://uataq.github.io/stilt/).  This inversion code works with files that 
+abide by the naming convention where the first 10 characters of the filename indicate
+the start time of the footprint in format: YYYYmmddHH (i.e. year, month, day, hour). There
+is no required naming convention after 10 characters (the rest of the filename can be
+whatever you want).
