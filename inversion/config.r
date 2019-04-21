@@ -11,7 +11,7 @@ foot_dir <- "../footprints/"
 
 # Names of observational sites (correspond to directory names in the footprint
 # dir)
-sites <- c("WBB", "DBK", "RPK", "SUG", "MSA", "SUN")
+sites <- c("site1", "site2", "site3", "site4", "site5", "site6")
 nsites <- length(sites)
 
 # include path
@@ -19,27 +19,16 @@ include_dir <- "../include/"
 
 # Do we want to clear footprints?  re-running Hsplit.r can take time, so opt not
 # to clear footprints when possible
-clear_H <- F
+clear_H <- T
 
 # Do we want to run the reduced chi-square test of fit?  this can also take time,
 # so set to TRUE only if desired
 compute_chi_sq <- F
 
-# Do we want to include estimated far-field contributions from an outer-domain
-# emission estimate in the background? (Need gridded outer-domain emission file)
-include_outer <- F
-
-# Do we want to include estimated biological flux contributions in the background?
-# (Need gridded biogenic flux file)
-include_bio <- F
-
 # ~~~~~~~~~~~~~~ Info files ~~~~~~~~~~~~~~#
 
 # lonlat_domain file - lists all lon/lat pairs in domain as look up table
 lonlat_domain_file <- paste0(include_dir, "lonlat_domain.rds")
-
-# lonlat_outer file - lists all lon/lat pairs in outer domain as look up table
-lonlat_outer_file <- NA#paste0(include_dir, "lonlat_outer.rds")
 
 # Prior emissions file
 prior_file <- paste0(include_dir, "prior_emiss.nc")
@@ -49,20 +38,6 @@ truth_file <- paste0(include_dir, "true_emiss.nc")
 
 # Prior uncertainty file
 sigma_file <- paste0(include_dir, "prior_uncert.nc")
-
-# obs file should contain data for all sites used in the inversion, with
-# nomenclature:
-# SITECODE  OBS TIME (seconds since 1970-01-01 00:00:00)  OBS VALUE
-# 'site1'          '[t1 number of seconds]'                 'X.XXX'
-# 'site1'          '[t2 number of seconds]'                 'X.XXX'
-#   ...                       ...                             ...
-# 'site2'          '[t1 number of seconds]'                 'X.XXX'
-
-obs_file <- paste0(include_dir, "obs.rds")
-
-# bg filepath (follows same convention as obs, but without column 1)
-bg_file <- paste0(include_dir, "background.rds")
-
 
 # ~~~~~~~~~~~~~~ Model params ~~~~~~~~~~~~~~#
 
@@ -109,18 +84,17 @@ obs_min_end <- 0
 obs_t_res <- 3600  #observation time resolution, in seconds
 
 
-# if observations are only desired from a subset of time, declare here otherwise,
+# if observations are only desired from a subset of time, declare here. otherwise,
 # set to 0:23 (i.e. all hours of day)
 subset_hours_utc <- 18:23
 
-# boolean var: do you wish to aggregate your obs daily within the subsetted
-# hours?
+# boolean var: do you wish to aggregate your obs daily within the subsetted hours?
 aggregate_obs <- T
 
 # if so, what is the required minimum number of observations within the subsetted time per day?
 min_agg_obs <- 2
 
-# Define POSIX times for flux/obs start/end
+# Define POSIX times for flux/obs start & end
 flux_start_POSIX <- ISOdatetime(flux_year_start, flux_month_start, flux_day_start,
     flux_hour_start, flux_min_start, 0, tz = "UTC")
 
@@ -146,7 +120,7 @@ lt <- 2
 ntimes <- length(seq(from = flux_start_POSIX, to = flux_end_POSIX,
             by = flux_t_res)) - 1
 
-filename_width <- nchar(ntimes) #will be an integer
+filename_width <- nchar(ntimes) # will be an integer - used for H*.rds and HQ*.rds files
 
 # time steps for posterior covariance V_shat, the timesteps to aggregate over
 tstart <- 1
@@ -155,4 +129,5 @@ tstop <- ntimes
 # define string for flux units
 flux_units <- "umol/(m2 s)"
 
+# random seed to set for monte carlo simulation
 random_seed <- 5

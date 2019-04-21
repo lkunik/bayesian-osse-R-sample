@@ -2,8 +2,7 @@
 # Each row of H contains footprint values for its corresponding observation in
 # the obs vector. Columns correspond to footprint values of corresponding gridcells
 # at all timesteps.
-# Domain-sized files are stored in H/ directory outer-domain footprint files
-# are stored in H_outer/ directory footprints and are used to calculate bkgd contributions
+# Domain-sized files are stored in H/ directory
 
 # author: Lewis Kunik
 
@@ -16,10 +15,7 @@
 ##  (H data files contain 3 columns: obs_index (row in H matrix), cell_index (column
 ##  in H matrix), foot_value) (arranged this way to omit cells with foot value = 0,
 ##  saves a lot of space because H matrix is big)
-##
-## H_outer/H*.rds - array of files, 1 per inversion timestep, same format as
-##  H/H*.rds but for footprints including the outer-domain. Larger files.
-##  footprint values still expressed as [mixing ratio/flux unit]
+
 
 # load package dependencies
 library(ncdf4)
@@ -32,9 +28,6 @@ source("config.r")
 
 # Start the clock!
 ptm1 <- proc.time()
-
-#if a lon/lat file is supplied, make H_outer files
-make_H_outer <- !is.na(lonlat_outer_file)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~ load required files ~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -64,29 +57,9 @@ nc_close(nc_f)
 lonlat_foot <- expand.grid(nc_lon, nc_lat)
 
 
-# create index vector to act as a mask for the outer H domain (cells which
-# overlap with bio fluxes)
+# create index vector to act as a mask for the domain
 iDomain <- apply(lonlat_domain, FUN = function(x) which((lonlat_foot[, 1] == x[1]) &
                                                           (lonlat_foot[, 2] == x[2])), MARGIN = 1)
-
-#if outer domain is toggled (for far-field fluxes) define here
-if (make_H_outer) {
-  # load in lonlat_outer file to make mask for outer cells
-  lonlat_outer <- readRDS(lonlat_outer_file)
-  ncells_outer <- nrow(lonlat_outer)
-
-  #apply rectangular index filter to the footprint domain
-  ifoot_complete <- array(1:nrow(lonlat_foot), dim = c(nlon, nlat))
-  in_lon <- unique(lonlat_outer[, 1])
-  in_lat <- unique(lonlat_outer[, 2])
-  imin_lat <- which(nc_lat == min(in_lat))
-  imax_lat <- which(nc_lat == max(in_lat))
-  imin_lon <- which(nc_lon == min(in_lon))
-  imax_lon <- which(nc_lon == max(in_lon))
-
-  ifoot_outer <- ifoot_complete[imin_lon:imax_lon, imin_lat:imax_lat]
-  iOuter <- sort(as.vector(ifoot_outer))  #specify the indices for the model outer domain
-} #end if make_H_outer
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~ create time bins ~~~~~~~~~~~~~~~~~~~~~~~#
@@ -128,16 +101,6 @@ for (ii in 1:ntimes) {
   fileWrite <- file(tmpfile, "wt")
   write.table(Hii, fileWrite, row.names = F)
   close(fileWrite)
-
-  if (make_H_outer) {
-
-    # do the same for outer files
-    tmpfile_outer <- paste0("H_outer/H", formatC(ii, width = 3, flag = "0"), ".txt")
-    fileWrite <- file(tmpfile_outer, "wt")
-    write.table(Hii, fileWrite, row.names = F)
-    close(fileWrite)
-
-  } #end if make_H_outer
 
 }
 
@@ -200,21 +163,9 @@ for (ii in 1:nobs) {
   if (foot_dim_lonxlat) {
     nc_foot_vec <- apply(nc_foot_sum, FUN = function(x) as.vector(x)[iDomain],
                          MARGIN = 3)  #iDomain denotes inner-domain cells
-
-    if (make_H_outer) {
-
-      nc_foot_vec_outer <- apply(nc_foot_sum, FUN = function(x) as.vector(x)[iOuter],
-                                 MARGIN = 3)  #iOuter denotes outer-domain cells
-    } #end if make_H_outer
   } else {
     nc_foot_vec <- apply(nc_foot_sum, FUN = function(x) as.vector(t(x))[iDomain],
                          MARGIN = 3)  #iDomain denotes inner-domain cells
-
-    if (make_H_outer) {
-
-      nc_foot_vec_outer <- apply(nc_foot_sum, FUN = function(x) as.vector(t(x))[iOuter],
-                                 MARGIN = 3)  #iOuter denotes outer-domain cells
-    } #end if make_H_outer
   }
 
   # append to Hfiles in the H directory
@@ -231,18 +182,6 @@ for (ii in 1:nobs) {
     # append this obs' values to the file
     fwrite(as.data.frame(Hsave), paste0("H/H", formatC(itime, width = 3, flag = "0"), ".txt"),
            row.names = F, col.names = F, append = T, sep = ' ')
-
-    if (make_H_outer) {
-
-      # OUTER DOMAIN: format the data to include only nonzero foot values (dense format)
-      inonzero_outer <- which(nc_foot_vec_outer[, jj] != 0)  #gets the cell indices of non-zero foot vals
-      Hvec_nonzero_outer <- nc_foot_vec_outer[inonzero_outer, jj]
-      Hsave_outer <- cbind(rep(ii, length(inonzero_outer)), inonzero_outer, Hvec_nonzero_outer)  #ii is obs index
-
-      # append this obs' values to the file
-      fwrite(as.data.frame(Hsave_outer), paste0("H_outer/H", formatC(itime, width = 3, flag = "0"),
-                                 ".txt"), row.names = F, col.names = F, append = T, sep = ' ')
-    } #end if make_H_outer
 
   }
 }
@@ -293,12 +232,6 @@ for (ii in 1:ntimes) {
   Hi <- fread(paste0("H/H", formatC(ii, width = 3, flag = "0"), ".txt"))
   Hsave <- Hi
 
-  if (make_H_outer) {
-    # outer H files
-    Hi_outer <- fread(paste0("H_outer/H", formatC(ii, width = 3, flag = "0"), ".txt"))
-    Hsave_outer <- Hi_outer
-  } #end if make_H_outer
-
   # if aggregation is toggled, fill in footprint values and aggregate daily by
   # subsetted times
   if (aggregate_obs) {
@@ -315,24 +248,6 @@ for (ii in 1:ntimes) {
 
     #this will hold the new dense-format daily-aggregated footprint
     Hsave <- array(0, dim = c(0, 3))
-
-
-    if (make_H_outer) {
-
-      #this will hold the old H matrix
-      Hi_full_outer <- array(0, dim = c(nobs, ncells_outer))
-
-      #this will hold the new H matrix
-      Hi_new_outer <- array(0, dim = c(nobs_aggr, ncells_outer))
-      #Hi_new_outer$Hrows <- rep(0, nobs_aggr)
-
-      iobs_outer <- as.matrix(Hi_outer[, 1]) #row indices
-      icell_outer <- as.matrix(Hi_outer[, 2]) #column indices
-      Hi_full_outer[cbind(iobs_outer, icell_outer)] <- as.matrix(Hi_outer[, 3]) #fill with non-zero vals
-
-      #this will hold the new dense-format daily-aggregated footprint
-      Hsave_outer <- array(0, dim = c(0, 3))
-    } #end if make_H_outer
 
     row_count <- 1
 
@@ -356,17 +271,7 @@ for (ii in 1:ntimes) {
           Hi_new[row_count,] <- Hi_full[idaysite, ]
         }
 
-        if (make_H_outer) {
-
-          if (length(idaysite) > 1) {
-            Hi_new_outer[row_count,] <- colMeans(Hi_full_outer[idaysite, ])
-          } else {
-            Hi_new_outer[row_count,] <- Hi_full_outer[idaysite, ]
-          }
-
-        } #end if make_H_outer
-
-        row_count <- row_count + 1
+        row_count <- row_count + 1 #increment counter
 
       }
     }
@@ -377,15 +282,6 @@ for (ii in 1:ntimes) {
       Hvec_nonzero <- Hi_new[jj, inonzero]
       Hsave <- rbind(Hsave, cbind(rep(jj, length(inonzero)), inonzero, Hvec_nonzero))  #jj is obs index
 
-      if (make_H_outer) {
-
-        inonzero_outer <- which(Hi_new_outer[jj, ] != 0)  #gets the cell indices of non-zero foot vals
-        Hvec_nonzero_outer <- Hi_new_outer[jj, inonzero_outer]
-        Hsave_outer <- rbind(Hsave_outer, cbind(rep(jj, length(inonzero_outer)),
-                                                inonzero_outer, Hvec_nonzero_outer))  #jj is obs index
-
-      } #end if make_H_outer
-
     }
   }
 
@@ -393,12 +289,6 @@ for (ii in 1:ntimes) {
   saveRDS(Hsave, paste0("H/H", formatC(ii, width = 3, flag = "0"), ".rds"))
   system(paste0("rm H/H", formatC(ii, width = 3, flag = "0"), ".txt"))  #remove original text file which is large
 
-  if (make_H_outer) {
-
-    saveRDS(Hsave_outer, paste0("H_outer/H", formatC(ii, width = 3, flag = "0"), ".rds"))
-    system(paste0("rm H_outer/H", formatC(ii, width = 3, flag = "0"), ".txt"))  #remove original text file which is large
-
-  } #end if make_H_outer
 }
 
 
