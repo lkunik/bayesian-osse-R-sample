@@ -41,15 +41,12 @@ read_sparse_h <- function(timestep, nobs, ncells) {
 # ~~~~~~~~~~~~~~~~~~~~~~~ load in required files ~~~~~~~~~~~~~~~~~~~~~~~#
 
 # load in receptor file
-if (aggregate_obs) {
-    recep_aggr_filepath <- paste0(out_path, "receptors_aggr.rds")
-    receptors_aggr <- readRDS(recep_aggr_filepath)
-    nobs <- nrow(receptors_aggr)
-} else {
-    recep_filepath <- paste0(out_path, "receptors.rds")
-    receptors <- readRDS(recep_filepath)
-    nobs <- nrow(receptors)
-}
+recep_file <- paste0(out_path, "receptors.rds")
+if(aggregate_obs)
+  recep_file <- paste0(out_path, "receptors_aggr.rds")
+
+receps <- readRDS(recep_file)
+nobs <- nrow(receps)
 
 # load in prior uncertainty
 sigma_file <- paste0(out_path, "sigma.rds")

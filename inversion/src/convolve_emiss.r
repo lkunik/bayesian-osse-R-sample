@@ -39,9 +39,12 @@ lonlat_domain <- readRDS(lonlat_domain_file)
 ncells <- nrow(lonlat_domain)
 nsites <- length(sites)
 
-receps_aggr_file <- paste0(out_path, "receptors_aggr.rds")
-receps_aggr <- readRDS(receps_aggr_file)
-nobs <- nrow(receps_aggr)
+recep_file <- paste0(out_path, "receptors.rds")
+if(aggregate_obs)
+  recep_file <- paste0(out_path, "receptors_aggr.rds")
+
+receps <- readRDS(recep_file)
+nobs <- nrow(receps)
 
 # ~~~~~~~~~~~~~~~ Load hourly emissions files ~~~~~~~~~~~~~~~#
 
