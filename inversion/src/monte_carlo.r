@@ -120,9 +120,9 @@ for (iiii in 1:n_ensembles) {
 
 # print results
 print("MONTE CARLO SIMULATION COMPLETE")
-print(paste("Average posterior emissions =", round(mean(shat_all_avgs), 5), flux_units))
+print(paste("Average posterior emissions =", round(mean(shat_all_avgs, na.rm = T), 5), flux_units))
 print(paste(subset_hour_begin, "-", subset_hour_end, "UTC average posterior emissions =",
-    round(mean(shat_sub_avgs), 5), flux_units))
+    round(mean(shat_sub_avgs, na.rm = T), 5), flux_units))
 
 
 ptm2_all <- proc.time()
