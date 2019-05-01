@@ -1,4 +1,4 @@
-README file for bayesian-osse-R source code
+README file for bayesian-osse-R source code (sample version with inputs)
 Author: Lewis Kunik (lewiskunik@gmail.com)
 University of Utah LAIR group
 
@@ -40,10 +40,10 @@ If running in the R programming environment (R or Rstudio),
 run by typing: source("run_all.r")
 If running directly from the terminal, run by typing: Rscript run_all.r
 
-NOTE: input NetCDF files (prior_emiss.nc, prior_uncert.nc, etc) should exist
+NOTE: input NetCDF files (prior_emiss.nc, prior_uncert.nc, true_emiss.nc) should exist
 in (lon x lat x time) format, with lon/lat values indicating center-of-grid-cell,
-and time values expressed as beginning of time-step in either POSIX time or seconds since R epoch
-(1970-01-01 00:00:00 UTC).
+and time values expressed as beginning of time-step in either POSIX time or seconds
+since R epoch (1970-01-01 00:00:00 UTC).
 
 
 In addition, footprint files must be supplied in the footprints/ directory.
@@ -54,3 +54,7 @@ abide by the naming convention where the first 10 characters of the filename ind
 the start time of the footprint in format: YYYYmmddHH (i.e. year, month, day, hour). There
 is no required naming convention after 10 characters (the rest of the filename can be
 whatever you want).
+
+Note that this source code uses the bayesian-osse-R Github repository as "upstream"
+source code. Original source code is primarily maintained by that repository,
+then merged into this one.
