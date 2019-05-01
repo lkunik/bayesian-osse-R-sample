@@ -2,15 +2,24 @@
 # expected value. 50 ensembles of 200 model iterations are run, totalling 10,000
 # runs
 
-# last modified September 2018 by Lewis Kunik, University of Utah
+# author: Lewis Kunik
 
-## prerequisite scripts: make_sprior.r make_struth.r (modify_sprior.r)
-## make_sigma.r make_Hs_hourly.r make_sp_cov.r make_tmp_cov.r make_HQ.r make_R.r
-## output files: H/H*.rds - array of files, 1 per inversion timestep, containing
-## condensed set of footprint values [ppm/(umol m-2 s-1)] (data files contain 3
-## columns: obs_index (row in H matrix), cell_index (column in H matrix),
-## foot_value) (arranged this way to omit cells with foot value = 0, saves a lot
-## of space because H matrix is big)
+## prerequisite scripts:
+##  make_sprior.r
+##  make_struth.r
+##  make_sigma.r
+##  convolve_emiss.r
+##  make_sp_cov.r
+##  make_tmp_cov.r
+##  make_HQ.r
+##  make_R.r
+##
+## output files:
+##  mc_avg.rds - domain-averaged values for all iterations
+##  mc_avg_subset.rds - time-subsetted (based on subset_hours_utc in config.r)
+##                      domain-averaged values for all iterations
+##  (mc_chi_sq.rds) - reduced chi squared values for each iteration
+##                    (if run_chi_sq_TF = TRUE)
 
 # load package dependencies
 library(lubridate)
@@ -27,7 +36,7 @@ ptm1_all <- proc.time()
 flux_times <- seq(from = flux_start_POSIX + flux_t_res/2, to = flux_end_POSIX, by = flux_t_res)
 
 times_hr <- hour(flux_times)  #this gives you the hour of timestamp at the CENTER of each timestep-bin
-iaft <- which(times_hr > 18)  #defines afternoon timesteps after 18 UTC
+isub <- which(times_hr %in% subset_hours_utc)  #defines subsetted time indices (based on subset_hours_utc in config.r)
 
 # load grid info
 lonlat_domain <- readRDS(lonlat_domain_file)
@@ -42,8 +51,8 @@ n_iter <- 200
 shat_all_avgs <- array(NA, dim = c(n_ensembles, n_iter))
 running_avgs <- array(NA, dim = c(n_ensembles, n_iter))
 
-shat_aft_avgs <- array(NA, dim = c(n_ensembles, n_iter))
-running_aft_avgs <- array(NA, dim = c(n_ensembles, n_iter))
+shat_sub_avgs <- array(NA, dim = c(n_ensembles, n_iter))
+running_sub_avgs <- array(NA, dim = c(n_ensembles, n_iter))
 
 chi_sq_arr <- array(NA, dim = c(n_ensembles, n_iter))
 
@@ -88,9 +97,9 @@ for (iiii in 1:n_ensembles) {
         shat_all_avgs[iiii, jjjj] <- mean(shat_time_avgs)
         running_avgs[iiii, jjjj] <- mean(shat_all_avgs[iiii, 1:jjjj])  #this is the running mean of this ensemble
 
-        # record the afternoon domain-averaged posterior value
-        shat_aft_avgs[iiii, jjjj] <- mean(shat_time_avgs[iaft])
-        running_aft_avgs[iiii, jjjj] <- mean(shat_aft_avgs[iiii, 1:jjjj])  #this is the running mean of this ensemble
+        # record the time-subsetted domain-averaged posterior value
+        shat_sub_avgs[iiii, jjjj] <- mean(shat_time_avgs[isub])
+        running_sub_avgs[iiii, jjjj] <- mean(shat_sub_avgs[iiii, 1:jjjj])  #this is the running mean of this ensemble
 
     }  #end n_iter
 
@@ -98,14 +107,8 @@ for (iiii in 1:n_ensembles) {
     mc_avg_path <- paste(out_path, "mc_avg.rds", sep = "")
     saveRDS(shat_all_avgs, mc_avg_path)
 
-    mc_run_path <- paste(out_path, "mc_run.rds", sep = "")
-    saveRDS(running_avgs, mc_run_path)
-
-    mc_avg_aft_path <- paste(out_path, "mc_avg_aft.rds", sep = "")
-    saveRDS(shat_aft_avgs, mc_avg_aft_path)
-
-    mc_run_aft_path <- paste(out_path, "mc_run_aft.rds", sep = "")
-    saveRDS(running_aft_avgs, mc_run_aft_path)
+    mc_avg_sub_path <- paste(out_path, "mc_avg_subset.rds", sep = "")
+    saveRDS(shat_sub_avgs, mc_avg_sub_path)
 
     if (run_chi_sq_TF) {
         mc_chi_sq_path <- paste(out_path, "mc_chi_sq.rds", sep = "")
@@ -117,9 +120,9 @@ for (iiii in 1:n_ensembles) {
 
 # print results
 print("MONTE CARLO SIMULATION COMPLETE")
-print(paste("Average posterior emissions =", round(mean(shat_all_avgs), 5), "umol/(m2 s)"))
-print(paste("Average posterior afternoon emissions =", round(mean(shat_aft_avgs),
-    5), "umol/(m2 s)"))
+print(paste("Average posterior emissions =", round(mean(shat_all_avgs), 5), flux_units))
+print(paste(subset_hour_begin, "-", subset_hour_end, "UTC average posterior emissions =",
+    round(mean(shat_sub_avgs), 5), flux_units))
 
 
 ptm2_all <- proc.time()

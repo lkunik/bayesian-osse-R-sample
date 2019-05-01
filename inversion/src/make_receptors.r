@@ -1,13 +1,15 @@
-# filter available footprints for the timespan defined in config.r, and for
-# available observations in the obs/bkgd files
+# filter available footprints in footprints/ dir for the timespan defined in config.r
 # author: Lewis Kunik
 
 ## prerequisite scripts:
-##  none (but obs.rds and background.rds must be present in include directory)
+##  none (but footprints must be present in footprints/ directory)
 ##
 ## output files:
 ##  receptors.rds - contains an (n x 2) matrix, col 1 has time of each receptor,
 ##  col 2 has filepath of each receptor
+##  (receptors_aggr.rds) - if aggregate_obs is seet to TRUE in config.r, this
+##  file will be created containing (n x 2) matrix, col 1 has the sitename, and
+##  col 2 has the day (expressed in epoch seconds since 1970-01-01Z)
 
 # load package dependencies
 library(lubridate)
@@ -71,9 +73,7 @@ for (ii in 1:nsites) {
     recep_list_unsorted <- c(recep_list_unsorted, paste0(site_dir, foot_files[iFoots]))
     times_unsorted <- c(times_unsorted, foot_times[iFoots])
 
-
-
-}
+} #end nsites for-loop
 
 #sort the receptor list by time (sites fall into order listed in config.r)
 time_list <- sort(times_unsorted)

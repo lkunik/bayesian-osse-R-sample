@@ -2,7 +2,6 @@
 
 # author: Lewis Kunik
 
-
 ## prerequisite scripts:
 ##  make_sprior.r
 ##  make_R.r
@@ -41,7 +40,6 @@ sprior <- readRDS(sprior_file)
 struth_file <- paste0(out_path, "struth.rds")
 struth <- readRDS(struth_file)
 
-
 # load in R
 R_file <- paste0(out_path, "R.rds")
 R <- readRDS(R_file)
@@ -53,6 +51,7 @@ HQHt <- readRDS(HQHt_file)
 # load in HQ files
 nobs <- nrow(R)
 
+# load domain lon/lat info
 lonlat_domain <- readRDS(lonlat_domain_file)
 
 
@@ -83,6 +82,8 @@ print("saving optimized emissions to s_hat.rds")
 filepath <- paste0(out_path, "s_hat.rds")
 saveRDS(s_hat, filepath)
 
+
+# this last part just calculates domain-avg values to print to console
 
 # ~~~~~~~~~~~~~~~~~~ grab the average flux for the domain ~~~~~~~~~~~~~~~~#
 

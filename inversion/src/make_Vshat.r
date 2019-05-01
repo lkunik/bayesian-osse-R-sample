@@ -1,4 +1,4 @@
-# Compute time-aggregated, grid-scale uncertainty of posterior
+# Compute time-aggregated, grid-scale uncertainty of posterior fluxes
 # author: Lewis Kunik
 
 # Vshat = (Q_{sum} - (HQ)t_{sum} (HQHt + R)^{-1} (HQ)_{sum}) / k^2

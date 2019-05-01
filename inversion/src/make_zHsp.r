@@ -2,8 +2,7 @@
 # author: Lewis Kunik
 
 ## prerequisite scripts:
-##  make_sprior.r
-##  Hsplit.r
+##  convolve_emiss.r
 ##  make_z.r
 ##
 ## output files:
