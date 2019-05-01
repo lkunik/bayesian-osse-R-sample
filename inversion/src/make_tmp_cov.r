@@ -43,7 +43,7 @@ for (ii in 1:length(unique(flux_times_hr))) {
 
     this_hr <- unique(flux_times_hr)[ii]
     ithis_hr <- which(flux_times_hr == this_hr) #which other flux times are at this hour-of-day?
-    inotthis_hr <- which(flux_times_hr != this_hr) #which other flux times AREN'T at this hour?
+    inotthis_hr <- which(flux_times_hr != this_hr) #which other flux times ARE NOT at this hour?
     icoords <- as.matrix(expand.grid(ithis_hr, inotthis_hr)) #define x/y index pairs of nonmatching hours
     D[icoords] <- 0
 }

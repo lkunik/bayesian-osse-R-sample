@@ -12,7 +12,7 @@
 library(lubridate)
 
 # run dependent scripts
-source("config_R_uncert.r")
+source("config_R_uncert.r") #config params (i.e. error vals) for the R matrix defined here
 
 
 
@@ -202,13 +202,6 @@ R_transWIND <- rep(rmse_transWIND^2, nobs)
 # ~~~~~~~~~~~~~~~ R_instr ~~~~~~~~~~~~~~~#
 R_instr <- rep(rmse_instr^2, nobs)
 
-# if extra instrument error for specific sites
-for(ii in 1:nsites){
-  extra_site_rmse <- extra_sites_err_rmse[[ii]]
-  isite <- isites[[ii]]
-  R_instr[isite] = R_instr[isite] + extra_site_rmse^2
-}
-
 
 # ~~~~~~~~~~~~~~~ R_bio ~~~~~~~~~~~~~~~#
 R_bio <- rep(rmse_bio^2, nobs)
@@ -256,8 +249,18 @@ if (aggregate_obs) {
     class(recep_times_aggr) <- c("POSIXt", "POSIXct")
     attributes(recep_times_aggr)$tzone <- "UTC"
 
+    isites <- lapply(sites, FUN = function(x) grep(x, recep_sites_aggr))
+
     # turn into diagonal n x n matrix
     R_aggregated <- aggregate_R(R, recep_names, recep_times, recep_sites_aggr, recep_times_aggr)
+
+    # if extra instrument error for specific sites
+    for(ii in 1:nsites){
+      extra_site_rmse <- extra_sites_err_rmse[[ii]]
+      isite <- isites[[ii]]
+      diag(R_aggregated)[isite] = diag(R_aggregated)[isite] + extra_site_rmse^2
+    }
+
 
     # save R to file
     print("saving model data mismatch matrix to R.rds")
@@ -265,6 +268,12 @@ if (aggregate_obs) {
     saveRDS(R_aggregated, filepath)
 
 } else {
+
+    for(ii in 1:nsites){
+      extra_site_rmse <- extra_sites_err_rmse[[ii]]
+      isite <- isites[[ii]]
+      diag(R)[isite] = diag(R)[isite] + extra_site_rmse^2
+    }
 
     # save R to file
     print("saving model data mismatch matrix to R.rds")

@@ -1,10 +1,16 @@
-# script to convolve footprints with prior and true emissions, resulting in
-# modeled enhancements at each receptor last modified September 2018 by Lewis
-# Kunik, University of Utah
+# convolve footprints with prior and true emissions, giving
+# modeled enhancements at each receptor
+# Author: Lewis Kunik
 
-## prerequisite scripts: make_receptors.r (struth.rds must be made) make_sprior.r
-## (sprior.rds must be made) make_struth.r Hsplit.r output files: Hsprior.rds
-## Hstruth.rds
+## prerequisite scripts:
+##  make_receptors.r
+##  make_sprior.r
+##  make_struth.r
+##  Hsplit.r
+##
+## output files:
+##  Hsprior.rds - modeled prior enhancements (in order of receptors)
+##  Hstruth.rds - modeled prior enhancements (in order of receptors)
 
 # load package dependencies
 library(ncdf4)
@@ -39,9 +45,12 @@ lonlat_domain <- readRDS(lonlat_domain_file)
 ncells <- nrow(lonlat_domain)
 nsites <- length(sites)
 
-receps_aggr_file <- paste0(out_path, "receptors_aggr.rds")
-receps_aggr <- readRDS(receps_aggr_file)
-nobs <- nrow(receps_aggr)
+recep_file <- paste0(out_path, "receptors.rds")
+if(aggregate_obs)
+  recep_file <- paste0(out_path, "receptors_aggr.rds")
+
+receps <- readRDS(recep_file)
+nobs <- nrow(receps)
 
 # ~~~~~~~~~~~~~~~ Load hourly emissions files ~~~~~~~~~~~~~~~#
 
@@ -65,10 +74,11 @@ for (ii in 1:ntimes) {
     # obtain biospheric contributions to observations
     Hstruth <- Hstruth + Hi %*% struth_mat[ii, ]
     Hsprior <- Hsprior + Hi %*% sprior_mat[ii, ]
+
 }  #end ntimes for-loop
 
-# save the receptor file as 2-D array of receptor times and files (times wind up
-# being saved as seconds since 1970-01-01Z)
+# save the receptor file as 2-D array of receptor times and files
+# (times are saved as seconds since 1970-01-01Z)
 
 filepath <- paste(out_path, "Hstruth.rds", sep = "")
 saveRDS(Hstruth, filepath)

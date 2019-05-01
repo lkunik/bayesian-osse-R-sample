@@ -2,7 +2,9 @@
 # Each row of H contains footprint values for its corresponding observation in
 # the obs vector. Columns correspond to footprint values of corresponding gridcells
 # at all timesteps.
-# Domain-sized files are stored in H/ directory
+
+# H files are generated for individual flux time steps and stored in the H/ directory
+
 
 # author: Lewis Kunik
 
@@ -10,18 +12,12 @@
 ## make_receptors.r
 ##
 ## output files:
-## H/H*.rds - array of files, 1 per inversion timestep, containing condensed set
-##  of footprint values [mixing ratio/flux unit]
-##  (H data files contain 3 columns: obs_index (row in H matrix), cell_index (column
-##  in H matrix), foot_value) (arranged this way to omit cells with foot value = 0,
-##  saves a lot of space because H matrix is big)
-
+##  H/H*.rds
 
 # load package dependencies
 library(ncdf4)
 library(data.table)
 library(lubridate)
-library(raster)
 
 # run dependent scripts
 source("config.r")
@@ -35,8 +31,11 @@ ptm1 <- proc.time()
 recep_file <- paste0(out_path, "receptors.rds")
 recep_mat <- readRDS(recep_file)
 recep_times <- as.numeric(recep_mat[, 1])
+
+#convert times to POSIX
 class(recep_times) <- c("POSIXt", "POSIXct")
 attributes(recep_times)$tzone <- "UTC"
+
 receptors <- recep_mat[, 2]
 nobs <- length(receptors)
 
@@ -56,33 +55,14 @@ nlon <- length(nc_lon)
 nc_close(nc_f)
 lonlat_foot <- expand.grid(nc_lon, nc_lat)
 
-
 # create index vector to act as a mask for the domain
 iDomain <- apply(lonlat_domain, FUN = function(x) which((lonlat_foot[, 1] == x[1]) &
-                                                          (lonlat_foot[, 2] == x[2])), MARGIN = 1)
-
+                (lonlat_foot[, 2] == x[2])), MARGIN = 1)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~ create time bins ~~~~~~~~~~~~~~~~~~~~~~~#
 
-# specify start/end from config.r variables
-y1 <- flux_year_start
-y2 <- flux_year_end
-
-m1 <- flux_month_start
-m2 <- flux_month_end
-
-d1 <- flux_day_start
-d2 <- flux_day_end
-
-h1 <- flux_hour_start
-h2 <- flux_hour_end
-
-mn1 <- flux_min_start
-mn2 <- flux_min_end
-
 # list all desired obs times
-time_bins <- seq(from = ISOdatetime(y1, m1, d1, h1, mn1, 0, tz = "UTC"),
-                 to = ISOdatetime(y2,m2, d2, h2, mn2, 0, tz = "UTC"), by = flux_t_res) # flux_t_res defined in config.r
+time_bins <- seq(from = flux_start_POSIX, to = flux_end_POSIX, by = flux_t_res) # flux_t_res defined in config.r
 
 
 # create H files for each timestep - we will use TXT files and later append to
@@ -174,12 +154,12 @@ for (ii in 1:nobs) {
     # itime denotes the index of inversion timestep i.e. which H file to append to
     itime <- itime <- which(time_bins == unique(times_cut)[jj])
 
-    # INNER DOMAIN: format the data to include only nonzero foot values (dense format)
+    # format the data to include only nonzero foot values (dense format)
     inonzero <- which(nc_foot_vec[, jj] != 0)  #gets the cell indices of non-zero foot vals
     Hvec_nonzero <- nc_foot_vec[inonzero, jj]
     Hsave <- cbind(rep(ii, length(inonzero)), inonzero, Hvec_nonzero)  #ii is obs index
 
-    # append this obs' values to the file
+    # append this receptor's values to the file
     fwrite(as.data.frame(Hsave), paste0("H/H", formatC(itime, width = 3, flag = "0"), ".txt"),
            row.names = F, col.names = F, append = T, sep = ' ')
 
@@ -193,32 +173,16 @@ print("replacing footprint .txt files with .rds files")
 # if aggregating obs: now combine rows (receptors) into single daily averages
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# load in time vars to specify the span of time over which we want subsetted obs
-y1 <- obs_year_start
-y2 <- obs_year_end
-
-m1 <- obs_month_start
-m2 <- obs_month_end
-
-d1 <- obs_day_start
-d2 <- obs_day_end
-
-h1 <- obs_hour_start
-h2 <- obs_hour_end
-
-mn1 <- obs_min_start
-mn2 <- obs_min_end
-
 # prepare to aggregate footprint files based on day
-time_bins_daily <- seq(from = ISOdatetime(y1, m1, d1, h1, mn1, 0, tz = "UTC"), to = ISOdatetime(y2,
-                       m2, d2, h2, mn2, 0, tz = "UTC") + 3600, by = 24 * 3600)
-
+time_bins_daily <- seq(from = obs_start_POSIX, to = obs_end_POSIX + 3600, by = 24 * 3600)
 
 times_cut_day <- as.POSIXct(cut(recep_times, breaks = time_bins_daily), tz = "UTC")
 
 #read in receptor aggregation file:
-receps_aggr <- readRDS(paste0(out_path, "receptors_aggr.rds"))
-nobs_aggr <- nrow(receps_aggr)
+if(aggregate_obs){
+  receps_aggr <- readRDS(paste0(out_path, "receptors_aggr.rds"))
+  nobs_aggr <- nrow(receps_aggr)
+}
 
 # run through each timestep, load H txt file, combine times into daily
 # footprints, and re-save as RDS
